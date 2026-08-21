@@ -14,6 +14,9 @@ desktop.ini
 backend/target/
 *.class
 
+# 前端构建产物（由 deploy/windows/build.cmd 复制进 static 后打包，不入库）
+backend/src/main/resources/static/
+
 # --- Runtime data (H2 database + uploaded images, contains user data) ---
 backend/data/
 backend/uploads/

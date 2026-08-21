@@ -113,6 +113,13 @@ npm run dev
 - **人气榜**：按 `heat = 评分数×10 + 点赞数×5 + 浏览量` 降序
 - **热门榜**：按近 30 天评分数 `recentCount` 降序
 
+## 部署
+
+生产环境使用 MySQL，配置全部通过环境变量注入（`DB_*` / `JWT_SECRET` / `INIT_PASSWORD`）。
+
+- **Windows（单 jar 一键部署）**：见 [`deploy/windows/README.md`](deploy/windows/README.md)
+- **Linux 服务器**：Nginx + systemd 托管前端并反向代理 `/api`、`/uploads`（思路同 `deploy/windows/nginx.conf`）
+
 ## 注意事项
 
 - JWT 密钥、数据库账号密码、种子账号密码均通过环境变量注入（`JWT_SECRET` / `DB_*` / `INIT_PASSWORD`）；未显式配置时，JWT 密钥与种子密码会在启动时随机生成，**生产环境务必显式配置并妥善保管**
