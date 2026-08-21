@@ -1,5 +1,7 @@
 package com.guatfood.config;
 
+import cn.hutool.log.Log;
+import cn.hutool.log.LogFactory;
 import com.guatfood.entity.Canteen;
 import com.guatfood.entity.Dish;
 import com.guatfood.entity.Favorite;
@@ -15,18 +17,29 @@ import com.guatfood.mapper.RatingMapper;
 import com.guatfood.mapper.UserMapper;
 import com.guatfood.mapper.WindowMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 
 /**
  * 首次启动种子数据初始化：管理员/演示用户/食堂/档口/菜品/评分/点赞
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
+
+    private static final Log log = LogFactory.get();
+
+    /** 种子账号初始密码，通过环境变量 INIT_PASSWORD 注入；未配置时启动时随机生成 */
+    @Value("${init.password:}")
+    private String initPassword;
+
+    /** 本次种子初始化使用的密码（所有演示账号共用） */
+    private String seedPassword;
 
     @Autowired private UserMapper userMapper;
     @Autowired private CanteenMapper canteenMapper;
@@ -48,7 +61,8 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seed() {
-        // ─── 用户 (密码均为 123456) ───
+        // ─── 用户 (密码由 init.password 指定，未配置时随机生成并打印) ───
+        seedPassword = resolveSeedPassword();
         User admin = user("admin", "管理员", "ADMIN");
         User u1 = user("zhangsan", "张三", "USER");
         User u2 = user("lisi", "李四", "USER");
@@ -205,13 +219,32 @@ public class DataInitializer implements CommandLineRunner {
     private User user(String username, String nickname, String role) {
         User u = new User();
         u.setUsername(username);
-        u.setPassword(encoder.encode("123456"));
+        u.setPassword(encoder.encode(seedPassword));
         u.setNickname(nickname);
         u.setAvatar(null);
         u.setRole(role);
         u.setStatus("ACTIVE");
         userMapper.insert(u);
         return u;
+    }
+
+    private String resolveSeedPassword() {
+        if (initPassword != null && !initPassword.isBlank()) {
+            return initPassword;
+        }
+        String generated = generatePassword();
+        log.warn("首次初始化：未配置 init.password（环境变量 INIT_PASSWORD），已随机生成演示账号密码 -> {}（所有演示账号共用）", generated);
+        return generated;
+    }
+
+    private String generatePassword() {
+        String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
+        }
+        return sb.toString();
     }
 
     private Canteen canteen(String name, String location, int sort) {

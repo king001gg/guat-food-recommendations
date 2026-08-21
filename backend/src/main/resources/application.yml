@@ -29,6 +29,10 @@ jwt:
   secret: ${JWT_SECRET:}
   expiration: 604800000  # 7 天 (毫秒)
 
+# 种子账号初始密码 (通过环境变量 INIT_PASSWORD 注入；未配置时启动时随机生成并打印到日志)
+init:
+  password: ${INIT_PASSWORD:}
+
 # 文件上传
 upload:
   path: ./uploads/

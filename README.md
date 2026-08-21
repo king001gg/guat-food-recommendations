@@ -77,10 +77,16 @@ npm run dev
 
 ### 默认账号
 
+首次启动会自动写入演示账号，密码 **不是固定值**，所有演示账号共用同一密码：
+
 | 账号 | 密码 | 角色 |
 |---|---|---|
-| `admin` | `123456` | 管理员 |
-| `zhangsan` / `lisi` / `wangwu` / `zhaoliu` / `sunqi` | `123456` | 普通用户 |
+| `admin` | 由 `INIT_PASSWORD` 指定，或启动日志中随机生成 | 管理员 |
+| `zhangsan` / `lisi` / `wangwu` / `zhaoliu` / `sunqi` | 同上 | 普通用户 |
+
+- **指定密码**：`INIT_PASSWORD=你的密码 ./mvnw spring-boot:run`（Windows CMD：先 `set INIT_PASSWORD=你的密码` 再启动）
+- **未指定时**：启动时用 `SecureRandom` 随机生成 12 位密码并打印到日志（搜索关键字 `随机生成演示账号密码`）
+- 仅在本地开发需要登录后台时用到；也可随时通过注册接口创建自己的账号
 
 ## 主要接口
 
@@ -109,6 +115,6 @@ npm run dev
 
 ## 注意事项
 
-- `application.yml` 中的 JWT 密钥为演示占位值，**生产环境务必更换**；数据库账号密码同理
+- JWT 密钥、数据库账号密码、种子账号密码均通过环境变量注入（`JWT_SECRET` / `DB_*` / `INIT_PASSWORD`）；未显式配置时，JWT 密钥与种子密码会在启动时随机生成，**生产环境务必显式配置并妥善保管**
 - 上传图片默认保存至 `backend/uploads/`，通过 `/uploads/**` 静态映射访问
 - 表名使用 `food_window`（避免 SQL 保留字 `window`）、评分列使用 `value_score`（避免保留字 `value`）
