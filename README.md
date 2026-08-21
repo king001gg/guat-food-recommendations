@@ -118,7 +118,8 @@ npm run dev
 生产环境使用 MySQL，配置全部通过环境变量注入（`DB_*` / `JWT_SECRET` / `INIT_PASSWORD`）。
 
 - **Windows（单 jar 一键部署）**：见 [`deploy/windows/README.md`](deploy/windows/README.md)
-- **Linux 服务器**：Nginx + systemd 托管前端并反向代理 `/api`、`/uploads`（思路同 `deploy/windows/nginx.conf`）
+- **Linux（Nginx + HTTPS + systemd）**：见 [`deploy/linux/README.md`](deploy/linux/README.md)
+- **安全部署与合规清单**：见 [`SECURITY.md`](SECURITY.md)（备案 / UGC 合规 / 加固自测）
 
 ## 注意事项
 

@@ -1,0 +1,17 @@
+[Unit]
+Description=Guat Food Backend (桂航美食推荐排行榜)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+User=guatfood
+Group=guatfood
+WorkingDirectory=/opt/guatfood
+EnvironmentFile=/etc/guatfood/guatfood.env
+ExecStart=/usr/bin/java -jar /opt/guatfood/guatfood-backend-1.0.0.jar
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
