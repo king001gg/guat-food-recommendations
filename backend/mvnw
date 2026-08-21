@@ -1,0 +1,18 @@
+#!/bin/bash
+# Maven Wrapper - downloads and runs Maven automatically
+MVN_VERSION="3.9.9"
+MVN_BASE="$HOME/.m2/wrapper/dists/apache-maven-${MVN_VERSION}"
+MVN_HOME="${MVN_BASE}/apache-maven-${MVN_VERSION}"
+MVN_CMD="${MVN_HOME}/bin/mvn"
+
+if [ ! -f "$MVN_CMD" ]; then
+  echo "Downloading Maven ${MVN_VERSION}..."
+  mkdir -p "$MVN_BASE"
+  curl -fsSLo "${MVN_BASE}/maven.zip" \
+    "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MVN_VERSION}/apache-maven-${MVN_VERSION}-bin.zip"
+  echo "Extracting..."
+  unzip -qo "${MVN_BASE}/maven.zip" -d "$MVN_BASE"
+  echo "Maven ${MVN_VERSION} ready."
+fi
+
+exec "$MVN_CMD" "$@"

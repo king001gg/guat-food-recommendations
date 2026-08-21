@@ -1,0 +1,34 @@
+# --- IDE ---
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Java / Maven build output ---
+backend/target/
+*.class
+
+# --- Runtime data (H2 database + uploaded images, contains user data) ---
+backend/data/
+backend/uploads/
+
+# --- Node ---
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-error.log*
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Logs ---
+*.log
+logs/
