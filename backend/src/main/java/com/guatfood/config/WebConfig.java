@@ -1,5 +1,6 @@
 package com.guatfood.config;
 
+import com.guatfood.security.RateLimitInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private JwtInterceptor jwtInterceptor;
+
+    @Autowired
+    private RateLimitInterceptor rateLimitInterceptor;
 
     @Value("${upload.path:./uploads/}")
     private String uploadPath;
@@ -34,6 +38,10 @@ public class WebConfig implements WebMvcConfigurer {
     /** 上传文件静态资源映射 */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 内置的种子图片（打包在 jar 内，部署时无需额外复制）
+        registry.addResourceHandler("/uploads/seed/**")
+                .addResourceLocations("classpath:/seed-images/");
+
         String path = uploadPath;
         if (!path.endsWith("/")) path += "/";
         registry.addResourceHandler("/uploads/**")
@@ -48,6 +56,17 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/login",
                         "/api/auth/register"
-                );
+                )
+                .order(0);
+
+        // 限流放在 JWT 之后：上传/评分可拿到当前用户 ID；登录/注册不经过 JWT，仍会执行
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns(
+                        "/api/auth/login",
+                        "/api/auth/register",
+                        "/api/upload/image",
+                        "/api/ratings"
+                )
+                .order(1);
     }
 }

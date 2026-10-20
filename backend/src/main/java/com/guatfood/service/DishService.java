@@ -1,7 +1,7 @@
 package com.guatfood.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.guatfood.common.PageResult;
 import com.guatfood.dto.DishDTO;
 import com.guatfood.entity.Dish;

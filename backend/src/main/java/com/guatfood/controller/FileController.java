@@ -1,5 +1,6 @@
 package com.guatfood.controller;
 
+import com.guatfood.audit.Audit;
 import com.guatfood.common.Result;
 import com.guatfood.service.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ public class FileController {
     private FileService fileService;
 
     /** 上传图片 */
+    @Audit("UPLOAD_IMAGE")
     @PostMapping("/image")
     public Result<String> uploadImage(@RequestParam("file") MultipartFile file) {
         String url = fileService.uploadImage(file);

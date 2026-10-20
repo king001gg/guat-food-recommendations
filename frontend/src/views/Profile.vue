@@ -67,6 +67,57 @@
             <el-empty v-if="!favLoading && !favorites.length" description="还没有收藏" />
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="账号安全" name="security">
+          <div class="security-panel">
+            <el-alert
+              type="warning"
+              :closable="false"
+              show-icon
+              title="修改密码后，所有设备上的登录状态都会立即失效，需要重新登录。"
+            />
+            <el-form
+              ref="pwdFormRef"
+              :model="pwdForm"
+              :rules="pwdRules"
+              label-width="100px"
+              class="pwd-form"
+              @submit.prevent="submitPassword"
+            >
+              <el-form-item label="原密码" prop="oldPassword">
+                <el-input
+                  v-model="pwdForm.oldPassword"
+                  type="password"
+                  show-password
+                  autocomplete="current-password"
+                  placeholder="请输入当前密码"
+                />
+              </el-form-item>
+              <el-form-item label="新密码" prop="newPassword">
+                <el-input
+                  v-model="pwdForm.newPassword"
+                  type="password"
+                  show-password
+                  autocomplete="new-password"
+                  placeholder="8-100位，不能与原密码相同"
+                />
+              </el-form-item>
+              <el-form-item label="确认新密码" prop="confirmPassword">
+                <el-input
+                  v-model="pwdForm.confirmPassword"
+                  type="password"
+                  show-password
+                  autocomplete="new-password"
+                  placeholder="再次输入新密码"
+                  @keyup.enter="submitPassword"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="pwdLoading" @click="submitPassword">修改密码</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </div>
     <AppFooter />
@@ -74,24 +125,75 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppHeader from '@/components/AppHeader.vue'
 import AppFooter from '@/components/AppFooter.vue'
-import { myRatings, myLikes, myFavorites, deleteRating } from '@/api'
+import { myRatings, myLikes, myFavorites, deleteRating, changePassword } from '@/api'
 import { useUserStore } from '@/store/user'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const tab = ref('ratings')
+const tabNames = ['ratings', 'likes', 'favorites', 'security']
+const tab = ref(tabNames.includes(route.query.tab) ? route.query.tab : 'ratings')
 const ratings = ref([])
 const likes = ref([])
 const favorites = ref([])
 const ratingLoading = ref(false)
 const likeLoading = ref(false)
 const favLoading = ref(false)
+
+watch(
+  () => route.query.tab,
+  (value) => {
+    if (tabNames.includes(value) && value !== tab.value) tab.value = value
+  }
+)
+
+// ─── 修改密码 ───
+const pwdFormRef = ref()
+const pwdLoading = ref(false)
+const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const pwdRules = {
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 8, max: 100, message: '新密码长度为8-100位', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== pwdForm.newPassword) callback(new Error('两次输入的新密码不一致'))
+        else callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+}
+
+const submitPassword = async () => {
+  try {
+    await pwdFormRef.value.validate()
+  } catch {
+    return
+  }
+  pwdLoading.value = true
+  try {
+    await changePassword({
+      oldPassword: pwdForm.oldPassword,
+      newPassword: pwdForm.newPassword,
+    })
+    userStore.clearLocal()
+    ElMessage.success('密码修改成功，请重新登录')
+    router.push('/login')
+  } finally {
+    pwdLoading.value = false
+  }
+}
 
 const formatTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '')
 
@@ -160,4 +262,6 @@ onMounted(() => {
 .mini-thumb { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: linear-gradient(135deg, #e8f0fb, #d8e4f5); display: flex; align-items: center; justify-content: center; color: #7ba0d3; }
 .mini-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .mini-info .mini-name { font-size: 15px; font-weight: 600; }
+.security-panel { max-width: 520px; padding: 8px 4px 16px; }
+.pwd-form { margin-top: 20px; }
 </style>

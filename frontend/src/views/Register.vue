@@ -14,7 +14,7 @@
           <el-input v-model="form.nickname" size="large" placeholder="你的昵称" :prefix-icon="'Postcard'" />
         </el-form-item>
         <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" size="large" show-password placeholder="至少6位密码" :prefix-icon="'Lock'" />
+          <el-input v-model="form.password" type="password" size="large" show-password placeholder="至少8位密码" :prefix-icon="'Lock'" />
         </el-form-item>
         <el-form-item label="确认密码" prop="confirm">
           <el-input v-model="form.confirm" type="password" size="large" show-password placeholder="再次输入密码" :prefix-icon="'Lock'" @keyup.enter="submit" />
@@ -47,7 +47,7 @@ const rules = {
   nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 100, message: '密码长度为6-100位', trigger: 'blur' },
+    { min: 8, max: 100, message: '密码长度为8-100位', trigger: 'blur' },
   ],
   confirm: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
@@ -62,12 +62,18 @@ const rules = {
 }
 
 const submit = async () => {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
   loading.value = true
   try {
     await register({ username: form.username, password: form.password, nickname: form.nickname })
     ElMessage.success('注册成功，请登录')
     router.push('/login')
+  } catch {
+    // 错误信息已由 request 拦截器统一提示
   } finally {
     loading.value = false
   }

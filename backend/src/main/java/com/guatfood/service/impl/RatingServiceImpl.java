@@ -2,7 +2,7 @@ package com.guatfood.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.guatfood.common.BusinessException;
 import com.guatfood.dto.RatingDTO;
 import com.guatfood.entity.Dish;

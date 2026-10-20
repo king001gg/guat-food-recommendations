@@ -25,6 +25,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item command="security">账号安全</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -49,10 +50,11 @@ const userStore = useUserStore()
 
 const isActive = (path) => router.currentRoute.value.path === path
 
-const onCommand = (cmd) => {
+const onCommand = async (cmd) => {
   if (cmd === 'profile') router.push('/profile')
+  if (cmd === 'security') router.push('/profile?tab=security')
   if (cmd === 'logout') {
-    userStore.logout()
+    await userStore.logout()
     ElMessage.success('已退出登录')
     router.push('/')
   }

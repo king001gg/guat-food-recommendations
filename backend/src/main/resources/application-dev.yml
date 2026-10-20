@@ -8,8 +8,11 @@ spring:
     console:
       enabled: true
       path: /h2-console
-  sql:
-    init:
-      mode: always
-      continue-on-error: true
-      schema-locations: classpath:db/schema-h2.sql
+
+app:
+  seed:
+    enabled: true
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

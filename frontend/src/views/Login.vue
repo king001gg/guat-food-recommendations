@@ -42,13 +42,19 @@ const rules = {
 }
 
 const submit = async () => {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
   loading.value = true
   try {
     const res = await login(form)
     userStore.setLogin(res.data)
     ElMessage.success('登录成功')
     router.push(route.query.redirect || '/')
+  } catch {
+    // 错误信息已由 request 拦截器统一提示
   } finally {
     loading.value = false
   }

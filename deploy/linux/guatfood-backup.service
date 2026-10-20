@@ -1,0 +1,19 @@
+[Unit]
+Description=GuatFood backup (MySQL + uploads)
+After=mysql.service
+Wants=mysql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/guatfood-backup.sh
+User=root
+Group=root
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+# 备份目录需与 guatfood.env 中的 BACKUP_DIR 保持一致
+ReadWritePaths=/var/backups/guatfood

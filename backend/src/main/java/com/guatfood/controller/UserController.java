@@ -1,10 +1,14 @@
 package com.guatfood.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.guatfood.audit.Audit;
 import com.guatfood.common.AuthUtil;
+import com.guatfood.common.BusinessException;
 import com.guatfood.common.Result;
+import com.guatfood.dto.ResetPasswordDTO;
 import com.guatfood.entity.User;
 import com.guatfood.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +29,7 @@ public class UserController {
     }
 
     /** 启用/禁用用户 */
+    @Audit("USER_STATUS")
     @PutMapping("/{id}/status")
     public Result<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
         AuthUtil.requireAdmin(userService);
@@ -33,6 +38,7 @@ public class UserController {
     }
 
     /** 变更角色 */
+    @Audit("USER_ROLE")
     @PutMapping("/{id}/role")
     public Result<?> updateRole(@PathVariable Long id, @RequestParam String role) {
         AuthUtil.requireAdmin(userService);
@@ -40,13 +46,27 @@ public class UserController {
         return Result.success("操作成功");
     }
 
+    /** 管理员重置用户密码；该用户旧 Token 立即失效 */
+    @Audit("PASSWORD_RESET")
+    @PutMapping("/{id}/password")
+    public Result<?> resetPassword(@PathVariable Long id,
+                                   @Valid @RequestBody ResetPasswordDTO dto) {
+        AuthUtil.requireAdmin(userService);
+        userService.resetPassword(id, dto.getNewPassword());
+        return Result.success("密码已重置，该用户需重新登录", null);
+    }
+
     /** 删除用户 */
+    @Audit("USER_DELETE")
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
         AuthUtil.requireAdmin(userService);
         User user = userService.getById(id);
-        if (user != null && "ADMIN".equals(user.getRole())) {
-            return Result.error("不能删除管理员账号");
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            throw new BusinessException(409, "不能删除管理员账号");
         }
         userService.removeById(id);
         return Result.success("删除成功");

@@ -12,6 +12,7 @@
         <el-menu-item index="/admin/canteens"><el-icon><School /></el-icon><span>食堂管理</span></el-menu-item>
         <el-menu-item index="/admin/ratings"><el-icon><Star /></el-icon><span>评价管理</span></el-menu-item>
         <el-menu-item index="/admin/users"><el-icon><User /></el-icon><span>用户管理</span></el-menu-item>
+        <el-menu-item index="/admin/audit-logs"><el-icon><Document /></el-icon><span>审计日志</span></el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -27,7 +28,8 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="security">修改密码</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -42,14 +44,17 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const onCommand = (cmd) => {
+const onCommand = async (cmd) => {
+  if (cmd === 'security') router.push('/profile?tab=security')
   if (cmd === 'logout') {
-    userStore.logout()
+    await userStore.logout()
+    ElMessage.success('已退出登录')
     router.push('/login')
   }
 }

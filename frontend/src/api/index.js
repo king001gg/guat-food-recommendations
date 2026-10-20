@@ -3,6 +3,9 @@ import request from '@/utils/request'
 // ─── 认证 ───
 export const login = (data) => request.post('/api/auth/login', data)
 export const register = (data) => request.post('/api/auth/register', data)
+export const getMe = () => request.get('/api/auth/me')
+export const logout = () => request.post('/api/auth/logout')
+export const changePassword = (data) => request.put('/api/auth/password', data)
 
 // ─── 食堂 ───
 export const getCanteens = () => request.get('/api/canteens')
@@ -65,4 +68,9 @@ export const updateUserStatus = (id, status) =>
   request.put(`/api/users/${id}/status`, null, { params: { status } })
 export const updateUserRole = (id, role) =>
   request.put(`/api/users/${id}/role`, null, { params: { role } })
+export const resetUserPassword = (id, newPassword) =>
+  request.put(`/api/users/${id}/password`, { newPassword })
 export const deleteUser = (id) => request.delete(`/api/users/${id}`)
+
+// ─── 审计日志（管理员） ───
+export const getAuditLogs = (params) => request.get('/api/audit-logs', { params })

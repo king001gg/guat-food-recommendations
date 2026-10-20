@@ -23,6 +23,9 @@ public class User {
     private String avatar;
     private String role;
     private String status;
+    /** JWT 版本号：注销/改密/重置密码/禁用时 +1，用于服务端吊销旧 Token */
+    @JsonIgnore
+    private Integer tokenVersion;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -48,6 +51,9 @@ public class User {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Integer getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(Integer tokenVersion) { this.tokenVersion = tokenVersion; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

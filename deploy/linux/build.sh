@@ -10,15 +10,15 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 echo "[1/3] 构建前端 ..."
-(cd frontend && npm install && npm run build)
+(cd frontend && npm ci && npm run build)
 
 echo "[2/3] 复制 frontend/dist 到 backend/src/main/resources/static ..."
 rm -rf backend/src/main/resources/static
 mkdir -p backend/src/main/resources/static
 cp -r frontend/dist/. backend/src/main/resources/static/
 
-echo "[3/3] 打包后端 jar ..."
-(cd backend && ./mvnw clean package -DskipTests)
+echo "[3/3] 运行测试并打包后端 jar ..."
+(cd backend && ./mvnw clean package)
 
 echo
 echo "打包完成：backend/target/guatfood-backend-1.0.0.jar"

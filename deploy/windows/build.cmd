@@ -10,7 +10,7 @@ cd /d "%~dp0..\.."
 
 echo [1/3] 构建前端 ...
 pushd frontend
-call npm install
+call npm ci
 if errorlevel 1 goto :fail
 call npm run build
 if errorlevel 1 goto :fail
@@ -22,9 +22,9 @@ mkdir "backend\src\main\resources\static"
 xcopy /E /Y /Q "frontend\dist\*" "backend\src\main\resources\static\"
 if errorlevel 1 goto :fail
 
-echo [3/3] 打包后端 jar ...
+echo [3/3] 运行测试并打包后端 jar ...
 pushd backend
-call mvnw.cmd clean package -DskipTests
+call mvnw.cmd clean package
 if errorlevel 1 goto :fail
 popd
 

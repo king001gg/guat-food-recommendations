@@ -1,6 +1,7 @@
 package com.guatfood.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.guatfood.audit.Audit;
 import com.guatfood.common.AuthUtil;
 import com.guatfood.common.PageResult;
 import com.guatfood.common.Result;
@@ -48,6 +49,7 @@ public class DishController {
     }
 
     /** 投稿菜品 */
+    @Audit("DISH_SUBMIT")
     @PostMapping
     public Result<Dish> submit(@Valid @RequestBody DishDTO dto) {
         Long userId = AuthUtil.requireLogin();
@@ -55,6 +57,7 @@ public class DishController {
     }
 
     /** 审核菜品 */
+    @Audit("DISH_APPROVE")
     @PutMapping("/{id}/status")
     public Result<?> approve(@PathVariable Long id, @RequestParam String status) {
         AuthUtil.requireAdmin(userService);
@@ -62,6 +65,7 @@ public class DishController {
         return Result.success("审核完成");
     }
 
+    @Audit("DISH_DELETE")
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
         AuthUtil.requireAdmin(userService);
