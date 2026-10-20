@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { readAuth } from '@/utils/auth'
 
 const routes = [
   { path: '/', name: 'Home', component: () => import('@/views/Home.vue') },
@@ -20,6 +21,7 @@ const routes = [
       { path: 'canteens', name: 'CanteenManage', component: () => import('@/views/admin/CanteenManage.vue') },
       { path: 'ratings', name: 'RatingManage', component: () => import('@/views/admin/RatingManage.vue') },
       { path: 'users', name: 'UserManage', component: () => import('@/views/admin/UserManage.vue') },
+      { path: 'audit-logs', name: 'AuditLogManage', component: () => import('@/views/admin/AuditLogManage.vue') },
     ],
   },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue') },
@@ -34,13 +36,22 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('token')
-  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  // readAuth 会顺带清理格式错误/已过期的 Token
+  const { token, user } = readAuth()
 
   if (to.meta.requiresAuth && !token) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
-  if (to.meta.requiresAdmin && (!token || !user || user.role !== 'ADMIN')) {
+  if (to.meta.requiresAdmin) {
+    if (!token) {
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
+    // 角色仅作前端兜底，最终权限仍由后端校验
+    if (!user || user.role !== 'ADMIN') {
+      return { path: '/' }
+    }
+  }
+  if ((to.path === '/login' || to.path === '/register') && token) {
     return { path: '/' }
   }
   return true

@@ -1,39 +1,95 @@
 server:
   port: 8080
+  # 优雅停机：等待进行中的请求完成，避免部署时截断响应
+  shutdown: graceful
 
 spring:
-  # 默认 dev 环境使用 H2
-  profiles:
-    active: dev
+  # 不设置默认 profile：本地开发显式使用 dev，生产使用 prod。
+  # ActiveProfileGuard 会在未指定 profile 时直接拒绝启动，避免误用 H2。
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 20MB
+  # 数据库结构统一由 Flyway 管理；旧库首次启动会建立 baseline(1) 再执行后续迁移
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: "P1 baseline (existing schema)"
+    validate-on-migrate: true
+    clean-disabled: true
+
+# 健康检查只暴露 health/info；生产环境另开 8081 回环端口，避免经 Nginx 暴露
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+  info:
+    env:
+      enabled: true
 
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 默认走 SLF4J（生产不打印 SQL）；dev 在 application-dev.yml 覆盖为 StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     db-config:
       id-type: assign_id
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
 
 # JWT 配置 (secret 通过环境变量 JWT_SECRET 注入；未配置时启动时生成临时随机密钥)
 jwt:
   secret: ${JWT_SECRET:}
   expiration: 604800000  # 7 天 (毫秒)
 
-# 种子账号初始密码 (通过环境变量 INIT_PASSWORD 注入；未配置时启动时随机生成并打印到日志)
+# 种子数据开关：默认关闭；dev 显式开启，prod 保持关闭。
+# 首次初始化必须提供 INIT_PASSWORD（管理员）；dev 还会创建演示账号，需提供 DEMO_PASSWORD。
+app:
+  seed:
+    enabled: false
+    demo-password: ${DEMO_PASSWORD:}
+  audit:
+    enabled: true
+    retention-days: 180
+    cleanup-cron: "0 30 3 * * ?"
+  security:
+    rate-limit:
+      enabled: true
+      # 登录：同一 IP 每分钟上限；同一 IP+用户名 15 分钟内失败次数上限
+      login-ip-per-minute: 60
+      login-user-failures: 5
+      login-user-window-seconds: 900
+      # 改密：同一用户 15 分钟内最多尝试次数（成功即清零）
+      password-change-failures: 5
+      password-change-window-seconds: 900
+      # 注册：同一 IP 每小时/每天上限
+      register-ip-per-hour: 5
+      register-ip-per-day: 20
+      # 写操作：同一用户每分钟上限
+      upload-user-per-minute: 10
+      rating-user-per-minute: 20
+      max-buckets: 100000
+      # 仅信任本机反向代理传来的 X-Forwarded-For（同机 Nginx）
+      trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1,::1}
+
 init:
   password: ${INIT_PASSWORD:}
 
 # 文件上传
 upload:
   path: ./uploads/
-  max-size: 5242880  # 5MB

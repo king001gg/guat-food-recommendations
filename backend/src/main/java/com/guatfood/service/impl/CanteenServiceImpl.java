@@ -1,7 +1,7 @@
 package com.guatfood.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.guatfood.entity.Canteen;
 import com.guatfood.mapper.CanteenMapper;
 import com.guatfood.service.CanteenService;

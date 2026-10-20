@@ -1,6 +1,6 @@
 package com.guatfood.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.guatfood.entity.Canteen;
 
 import java.util.List;

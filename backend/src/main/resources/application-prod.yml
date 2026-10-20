@@ -1,9 +1,33 @@
+server:
+  # 生产默认只监听回环；如确实需要直连再由 SERVER_ADDRESS 覆盖
+  address: ${SERVER_ADDRESS:127.0.0.1}
+
 spring:
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:guatfood}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  sql:
-    init:
-      mode: never
+  h2:
+    console:
+      enabled: false
+
+# 管理端口单独监听回环，仅供部署脚本健康检查；不要经 Nginx 暴露
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+    address: ${MANAGEMENT_ADDRESS:127.0.0.1}
+  endpoint:
+    health:
+      # 仅回环可访问，详情用于部署脚本区分“数据库未就绪”和“应用启动失败”
+      show-details: always
+
+app:
+  seed:
+    # 生产不写入演示账号/虚假评分；仅在空库时创建管理员（需要 INIT_PASSWORD）
+    enabled: false
+
+mybatis-plus:
+  configuration:
+    # 生产不打印 SQL，避免评论、用户名等数据进入日志
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl

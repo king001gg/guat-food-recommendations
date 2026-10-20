@@ -28,21 +28,31 @@
 
 - [ ] `JWT_SECRET`：`openssl rand -base64 48` 生成，写入环境变量，勿用默认。
 - [ ] `DB_PASSWORD`：独立强密码，勿复用。
-- [ ] `INIT_PASSWORD`：部署前设为强密码，勿用 `123456` 等弱口令。
+- [ ] `INIT_PASSWORD`：部署前设为强密码（至少 8 位，勿用 `123456`）；仅在空库首次启动时使用，生产不会创建演示账号。
+- [ ] `DEMO_PASSWORD`：仅本地开发使用，生产不要设置；必须与 `INIT_PASSWORD` 不同。
 - [ ] `SERVER_ADDRESS=127.0.0.1`：后端只监听回环，由 Nginx 反代，不直接暴露 8080。
+- [ ] `MANAGEMENT_ADDRESS=127.0.0.1`：Actuator 管理端口只监听回环（默认 8081）；Nginx 已屏蔽 `/actuator`。
 - [ ] **HTTPS**：必须开启（acme.sh/云厂商免费证书）。
 - [ ] 上传目录 `uploads/` 独立且定期备份；MySQL 用 `mysqldump` 定时备份。
+- [ ] 启用内置备份定时器（Linux `guatfood-backup.timer` / Windows 任务计划程序 + `backup.ps1`），并定期做恢复演练。
+- [ ] 首次部署后立即修改 `admin` 初始密码（个人中心 → 账号安全），并确认旧 Token 已失效。
 
 ## 四、代码层已内置的安全措施
 
 - 密码 BCrypt 加密存储；登录错误统一提示，不泄露账号是否存在
-- JWT 认证 + 角色权限校验（普通用户/管理员，接口级）
+- JWT 认证 + 角色权限校验（普通用户/管理员，接口级）；生产必须配置至少 32 字节的 `JWT_SECRET`
+- **服务端 Token 吊销**：注销、修改密码、管理员重置密码、禁用账号都会递增 `token_version`，旧 Token 立即失效
+- **限流**：登录（IP 每分钟 / IP+用户名 15 分钟失败次数）、注册（IP 每小时/每天）、改密（用户 15 分钟尝试次数）、上传/评分（用户每分钟）；超限返回 `429` + `Retry-After`。路径按 Spring 解析后的结果匹配，`;matrix` 参数等变体无法绕过
+- **登录等时比较**：用户名不存在时也执行一次 BCrypt 校验，避免通过响应耗时枚举账号
+- **审计日志**：登录/注册/注销/改密/重置/用户与内容管理写操作落库；不记录请求体，查询串中的密码/Token 已脱敏，默认保留 180 天
 - SQL 全部参数化查询（MyBatis-Plus），防注入
 - 越权防护（删除他人评分/点赞/收藏返回 403）
 - 未发布内容仅管理员可见（防绕过审核直接访问）
 - 上传文件白名单（jpg/png/gif/webp）+ 重压缩，防图片木马
-- 错误信息脱敏，不泄露内部异常细节
+- 错误信息脱敏，不泄露内部异常细节；HTTP 状态与业务码一致（401/403/409/429 等）
+- 数据库结构由 Flyway 迁移管理（`baseline-on-migrate`，禁止 `clean`），避免手工改表漂移
 - 种子账号密码随机化 / 环境变量注入，不在源码中硬编码
+- CI 运行后端集成测试与前端构建；Trivy + Dependabot 持续检查依赖漏洞
 
 ## 五、部署后自测
 
@@ -55,4 +65,18 @@ curl -s 'https://你的域名/api/windows?page=1&size=1'
 curl -sI https://你的域名/uploads/xxx.jpg
 # HTTP 应跳转 HTTPS
 curl -sI http://你的域名 | grep -i location
+# Nginx 应屏蔽管理端点
+curl -sI https://你的域名/actuator/health
+# 本机健康检查（生产管理端口只监听 127.0.0.1）
+curl -fsS http://127.0.0.1:8081/actuator/health/readiness
+# 登录失败应返回 401；连续失败应触发 429（带 Retry-After）
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://你的域名/api/auth/login \
+  -H 'Content-Type: application/json' -d '{"username":"admin","password":"wrong"}'
+```
+
+审计日志可在管理后台「审计日志」页面查询，或直接查库：
+
+```sql
+SELECT action, actor_username, success, result_code, ip, created_at
+FROM audit_log ORDER BY created_at DESC LIMIT 20;
 ```

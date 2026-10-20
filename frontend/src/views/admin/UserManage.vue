@@ -22,8 +22,9 @@
       <el-table-column label="注册时间" width="160">
         <template #default="{ row }">{{ fmt(row.createdAt) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="240" fixed="right">
+      <el-table-column label="操作" width="320" fixed="right">
         <template #default="{ row }">
+          <el-button size="small" @click="openReset(row)">重置密码</el-button>
           <el-button v-if="row.role !== 'ADMIN'" size="small" type="warning" @click="setRole(row)">设为管理员</el-button>
           <el-button v-if="row.role !== 'ADMIN'" size="small" :type="row.status === 'ACTIVE' ? 'info' : 'success'" @click="setStatus(row)">
             {{ row.status === 'ACTIVE' ? '禁用' : '启用' }}
@@ -36,13 +37,39 @@
     <div class="pager">
       <el-pagination background layout="prev, pager, next, total" :total="total" :page-size="size" :current-page="page" @current-change="onPage" />
     </div>
+
+    <el-dialog v-model="resetVisible" title="重置密码" width="440px" :close-on-click-modal="false">
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="`重置「${resetTarget?.nickname || resetTarget?.username || ''}」的密码后，该用户所有登录状态会立即失效。`"
+      />
+      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top" class="reset-form">
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="resetForm.newPassword" type="password" show-password autocomplete="new-password" placeholder="8-100位" />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input v-model="resetForm.confirmPassword" type="password" show-password autocomplete="new-password" placeholder="再次输入新密码" @keyup.enter="submitReset" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetVisible = false">取消</el-button>
+        <el-button type="primary" :loading="resetLoading" @click="submitReset">确定重置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUsers, updateUserStatus, updateUserRole, deleteUser } from '@/api'
+import { getUsers, updateUserStatus, updateUserRole, deleteUser, resetUserPassword } from '@/api'
+import { useUserStore } from '@/store/user'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 const list = ref([])
 const total = ref(0)
@@ -83,10 +110,65 @@ const remove = async (row) => {
   load()
 }
 
+// ─── 重置密码 ───
+const resetVisible = ref(false)
+const resetLoading = ref(false)
+const resetTarget = ref(null)
+const resetFormRef = ref()
+const resetForm = reactive({ newPassword: '', confirmPassword: '' })
+const resetRules = {
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 8, max: 100, message: '新密码长度为8-100位', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== resetForm.newPassword) callback(new Error('两次输入的新密码不一致'))
+        else callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+}
+
+const openReset = async (row) => {
+  resetTarget.value = row
+  resetForm.newPassword = ''
+  resetForm.confirmPassword = ''
+  resetVisible.value = true
+  await nextTick()
+  resetFormRef.value?.clearValidate()
+}
+
+const submitReset = async () => {
+  try {
+    await resetFormRef.value.validate()
+  } catch {
+    return
+  }
+  resetLoading.value = true
+  try {
+    await resetUserPassword(resetTarget.value.id, resetForm.newPassword)
+    resetVisible.value = false
+    if (String(resetTarget.value.id) === String(userStore.user?.id)) {
+      userStore.clearLocal()
+      ElMessage.success('密码已重置，请重新登录')
+      router.push('/login')
+    } else {
+      ElMessage.success('密码已重置，该用户需重新登录')
+    }
+  } finally {
+    resetLoading.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
 <style scoped>
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
 .pager { display: flex; justify-content: center; margin-top: 16px; }
+.reset-form { margin-top: 16px; }
 </style>

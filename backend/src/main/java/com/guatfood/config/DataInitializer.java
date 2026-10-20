@@ -24,22 +24,28 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 
 /**
- * 首次启动种子数据初始化：管理员/演示用户/食堂/档口/菜品/评分/点赞
+ * 首次启动种子数据初始化：
+ * dev：管理员 + 演示账号 + 食堂/档口/菜品/评分/点赞/收藏；
+ * prod：仅创建管理员，不写入任何演示数据。
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private static final Log log = LogFactory.get();
 
-    /** 种子账号初始密码，通过环境变量 INIT_PASSWORD 注入；未配置时启动时随机生成 */
+    /** 管理员初始密码，通过环境变量 INIT_PASSWORD 注入；仅在空库首次初始化时使用 */
     @Value("${init.password:}")
     private String initPassword;
 
-    /** 本次种子初始化使用的密码（所有演示账号共用） */
-    private String seedPassword;
+    /** 是否写入演示数据（dev=true，prod=false） */
+    @Value("${app.seed.enabled:false}")
+    private boolean seedEnabled;
+
+    /** 演示账号密码，通过环境变量 DEMO_PASSWORD 注入；仅 dev 使用 */
+    @Value("${app.seed.demo-password:}")
+    private String demoPassword;
 
     @Autowired private UserMapper userMapper;
     @Autowired private CanteenMapper canteenMapper;
@@ -57,18 +63,35 @@ public class DataInitializer implements CommandLineRunner {
         if (userMapper.selectCount(null) > 0) {
             return;
         }
-        seed();
+        if (seedEnabled) {
+            seedDemo();
+        } else {
+            seedAdmin();
+        }
     }
 
-    private void seed() {
-        // ─── 用户 (密码由 init.password 指定，未配置时随机生成并打印) ───
-        seedPassword = resolveSeedPassword();
-        User admin = user("admin", "管理员", "ADMIN");
-        User u1 = user("zhangsan", "张三", "USER");
-        User u2 = user("lisi", "李四", "USER");
-        User u3 = user("wangwu", "王五", "USER");
-        User u4 = user("zhaoliu", "赵六", "USER");
-        User u5 = user("sunqi", "孙七", "USER");
+    /** 生产首次启动：只创建管理员 */
+    private void seedAdmin() {
+        String adminPassword = requirePassword("INIT_PASSWORD", initPassword);
+        user("admin", "管理员", "ADMIN", adminPassword);
+        log.info("首次启动：已创建管理员账号 admin（密码由 INIT_PASSWORD 提供，未写入日志）");
+    }
+
+    /** 开发环境：管理员 + 演示账号 + 完整示例数据 */
+    private void seedDemo() {
+        String adminPassword = requirePassword("INIT_PASSWORD", initPassword);
+        String demoPwd = requirePassword("DEMO_PASSWORD", demoPassword);
+        if (adminPassword.equals(demoPwd)) {
+            throw new IllegalStateException("INIT_PASSWORD 与 DEMO_PASSWORD 不能相同");
+        }
+
+        // ─── 用户（管理员与演示账号使用不同密码） ───
+        User admin = user("admin", "管理员", "ADMIN", adminPassword);
+        User u1 = user("zhangsan", "张三", "USER", demoPwd);
+        User u2 = user("lisi", "李四", "USER", demoPwd);
+        User u3 = user("wangwu", "王五", "USER", demoPwd);
+        User u4 = user("zhaoliu", "赵六", "USER", demoPwd);
+        User u5 = user("sunqi", "孙七", "USER", demoPwd);
 
         // ─── 食堂 ───
         Canteen c1 = canteen("天舟楼食堂", "南校区", 1);
@@ -101,6 +124,24 @@ public class DataInitializer implements CommandLineRunner {
         Dish d10 = dish(w8.getId(), "五花肉石锅拌饭", "锅巴香脆，韩式辣酱", "16.00");
         Dish d11 = dish(w9.getId(), "叉烧饭", "蜜汁叉烧，肥瘦相间", "18.00");
         Dish d12 = dish(w10.getId(), "杨枝甘露", "芒果+西柚，清甜解暑", "10.00");
+
+        // ─── 美食图鉴（图片菜，图片打包在 resources/seed-images/，经 /uploads/seed/ 访问） ───
+        Window gallery = window(c4.getId(), "美食图鉴", "个人美食图鉴（占位菜名，可在后台修改）", "图鉴");
+        String[] galleryDishes = {
+                "啤酒鱼", "金汤鱼粉", "大众餐", "牛腩粉", "炸肉拌面", "大众餐",
+                "菜品07", "桂林米粉", "菜品09", "菜品10", "菜品11", "烤鸭腿饭（七姑烧鹅）",
+                "鸡公堡", "菜品14", "大众餐", "炒粉生蚝", "马后炮烧烤", "马后炮烧烤",
+                "烤鱼", "驴肉火锅", "香辣蟹", "清补凉糖水", "七姑烧鹅", "七姑烧鹅",
+                "鸡腿饭", "烤鸭腿拼盐焗鸡", "烧鸭拼鸡排", "牛排", "烧鸭拼手撕鸡（新井烧鹅）", "牛排煲",
+                "湖北小碗菜", "五指毛桃煲鸡", "醋血鸭", "菜品34", "菜品35", "菜品36",
+                "菜品37", "菜品38", "菜品39", "菜品40", "菜品41", "菜品42",
+                "菜品43", "菜品44", "菜品45", "菜品46", "菜品47", "菜品48",
+                "菜品49", "菜品50", "菜品51",
+        };
+        for (int i = 0; i < galleryDishes.length; i++) {
+            dish(gallery.getId(), galleryDishes[i], "", "0.00",
+                    String.format("/uploads/seed/%02d.jpg", i + 1));
+        }
 
         // ─── 档口评分 ───
         rate(u1, "WINDOW", w1.getId(), 5, 4, 4, "米粉很正宗，锅烧特别脆");
@@ -216,35 +257,33 @@ public class DataInitializer implements CommandLineRunner {
         favorite(u1, "DISH", d9.getId());
     }
 
-    private User user(String username, String nickname, String role) {
+    private User user(String username, String nickname, String role, String password) {
         User u = new User();
         u.setUsername(username);
-        u.setPassword(encoder.encode(seedPassword));
+        u.setPassword(encoder.encode(password));
         u.setNickname(nickname);
         u.setAvatar(null);
         u.setRole(role);
         u.setStatus("ACTIVE");
+        u.setTokenVersion(0);
         userMapper.insert(u);
         return u;
     }
 
-    private String resolveSeedPassword() {
-        if (initPassword != null && !initPassword.isBlank()) {
-            return initPassword;
+    /** 首次初始化必须显式提供强密码，绝不生成后打印到日志 */
+    private String requirePassword(String envName, String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("首次初始化需要设置环境变量 " + envName + "（至少 8 位）");
         }
-        String generated = generatePassword();
-        log.warn("首次初始化：未配置 init.password（环境变量 INIT_PASSWORD），已随机生成演示账号密码 -> {}（所有演示账号共用）", generated);
-        return generated;
-    }
-
-    private String generatePassword() {
-        String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-        SecureRandom random = new SecureRandom();
-        StringBuilder sb = new StringBuilder(12);
-        for (int i = 0; i < 12; i++) {
-            sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
+        if (value.length() < 8) {
+            throw new IllegalStateException(envName + " 至少需要 8 位");
         }
-        return sb.toString();
+        String lower = value.toLowerCase();
+        if (lower.contains("改成") || lower.contains("changeme")
+                || lower.contains("change_me") || lower.contains("your_password")) {
+            throw new IllegalStateException(envName + " 仍是占位值，请改成真实强密码");
+        }
+        return value;
     }
 
     private Canteen canteen(String name, String location, int sort) {
@@ -270,11 +309,15 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private Dish dish(Long windowId, String name, String desc, String price) {
+        return dish(windowId, name, desc, price, null);
+    }
+
+    private Dish dish(Long windowId, String name, String desc, String price, String image) {
         Dish d = new Dish();
         d.setWindowId(windowId);
         d.setName(name);
         d.setDescription(desc);
-        d.setImage(null);
+        d.setImage(image);
         d.setPrice(new BigDecimal(price));
         d.setStatus("PUBLISHED");
         d.setViewCount(0);

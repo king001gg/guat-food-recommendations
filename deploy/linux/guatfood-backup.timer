@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily GuatFood backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=600
+Unit=guatfood-backup.service
+
+[Install]
+WantedBy=timers.target

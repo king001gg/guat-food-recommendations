@@ -10,7 +10,7 @@ public class RegisterDTO {
     private String username;
 
     @NotBlank(message = "密码不能为空")
-    @Size(min = 6, max = 100, message = "密码长度为6-100位")
+    @Size(min = 8, max = 100, message = "密码长度为8-100位")
     private String password;
 
     @NotBlank(message = "昵称不能为空")

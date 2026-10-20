@@ -1,6 +1,7 @@
 package com.guatfood.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.guatfood.audit.Audit;
 import com.guatfood.common.AuthUtil;
 import com.guatfood.common.Result;
 import com.guatfood.dto.RatingDTO;
@@ -21,6 +22,7 @@ public class RatingController {
     private UserService userService;
 
     /** 提交/更新评分 */
+    @Audit("RATING_SUBMIT")
     @PostMapping
     public Result<Rating> submit(@Valid @RequestBody RatingDTO dto) {
         Long userId = AuthUtil.requireLogin();
@@ -54,6 +56,7 @@ public class RatingController {
     }
 
     /** 删除自己的评分 */
+    @Audit("RATING_DELETE")
     @DeleteMapping("/{id}")
     public Result<?> deleteMine(@PathVariable Long id) {
         Long userId = AuthUtil.requireLogin();
@@ -62,6 +65,7 @@ public class RatingController {
     }
 
     /** 管理员删除评分 */
+    @Audit("RATING_ADMIN_DELETE")
     @DeleteMapping("/admin/{id}")
     public Result<?> adminDelete(@PathVariable Long id) {
         AuthUtil.requireAdmin(userService);

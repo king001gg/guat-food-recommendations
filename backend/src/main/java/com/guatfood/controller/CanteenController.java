@@ -1,5 +1,6 @@
 package com.guatfood.controller;
 
+import com.guatfood.audit.Audit;
 import com.guatfood.common.AuthUtil;
 import com.guatfood.common.Result;
 import com.guatfood.entity.Canteen;
@@ -24,12 +25,14 @@ public class CanteenController {
         return Result.success(canteenService.listAll());
     }
 
+    @Audit("CANTEEN_CREATE")
     @PostMapping
     public Result<Canteen> create(@RequestBody Canteen canteen) {
         AuthUtil.requireAdmin(userService);
         return Result.success(canteenService.create(canteen));
     }
 
+    @Audit("CANTEEN_UPDATE")
     @PutMapping("/{id}")
     public Result<Canteen> update(@PathVariable Long id, @RequestBody Canteen canteen) {
         AuthUtil.requireAdmin(userService);
@@ -37,6 +40,7 @@ public class CanteenController {
         return Result.success(canteenService.update(canteen));
     }
 
+    @Audit("CANTEEN_DELETE")
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
         AuthUtil.requireAdmin(userService);

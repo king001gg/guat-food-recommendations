@@ -20,6 +20,13 @@ backend/src/main/resources/static/
 # --- Runtime data (H2 database + uploaded images, contains user data) ---
 backend/data/
 backend/uploads/
+uploads/
+/data/
+*.mv.db
+*.trace.db
+
+# --- Local deployment secrets ---
+deploy/windows/run.env.cmd
 
 # --- Node ---
 frontend/node_modules/

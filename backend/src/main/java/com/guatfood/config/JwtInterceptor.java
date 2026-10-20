@@ -1,6 +1,10 @@
 package com.guatfood.config;
 
 import com.guatfood.common.BusinessException;
+import com.guatfood.entity.User;
+import com.guatfood.service.UserService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,13 +13,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * JWT 拦截器: 校验 Token, 将 userId 存入 ThreadLocal
+ * JWT 拦截器: 校验签名 + 用户状态 + token_version，将 userId 存入 ThreadLocal。
  */
 @Component
 public class JwtInterceptor implements HandlerInterceptor {
 
     @Autowired
     private JwtConfig jwtConfig;
+
+    @Autowired
+    private UserService userService;
 
     /** ThreadLocal 存储当前登录用户 ID */
     private static final ThreadLocal<Long> currentUserId = new ThreadLocal<>();
@@ -40,28 +47,52 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // GET 请求公开访问；但尝试解析 Token，如果有效则存入 ThreadLocal 供后续使用
-        if ("GET".equalsIgnoreCase(request.getMethod())) {
-            String token = extractToken(request);
-            if (StringUtils.hasText(token) && jwtConfig.validateToken(token)) {
-                setCurrentUserId(jwtConfig.getUserIdFromToken(token));
-            }
-            return true;
-        }
-
-        // POST / PUT / DELETE 必须认证
+        boolean readOnly = "GET".equalsIgnoreCase(request.getMethod());
         String token = extractToken(request);
+
+        // GET 请求公开访问；带有效 Token 时注入当前用户，便于详情页返回“我的评分/点赞”状态
         if (!StringUtils.hasText(token)) {
+            if (readOnly) {
+                return true;
+            }
             throw new BusinessException(401, "请先登录");
         }
 
-        if (!jwtConfig.validateToken(token)) {
+        User user = authenticate(token);
+        if (user == null) {
+            // 公开 GET 遇到过期/被吊销 Token 时按匿名处理，避免首页被强制跳转登录
+            if (readOnly) {
+                return true;
+            }
             throw new BusinessException(401, "Token 无效或已过期，请重新登录");
         }
 
-        Long userId = jwtConfig.getUserIdFromToken(token);
-        setCurrentUserId(userId);
+        setCurrentUserId(user.getId());
         return true;
+    }
+
+    /**
+     * 校验 Token 并返回当前用户；任何一项不满足都返回 null。
+     * 校验链：签名/过期时间 -> 用户存在 -> 账号 ACTIVE -> token_version 一致。
+     */
+    private User authenticate(String token) {
+        try {
+            Claims claims = jwtConfig.parseClaims(token);
+            Long userId = Long.valueOf(claims.getSubject());
+            Object tv = claims.get("tv");
+            // P1 之前签发的 Token 没有 tv 声明，一律视为失效
+            if (!(tv instanceof Number)) {
+                return null;
+            }
+            User user = userService.getById(userId);
+            if (user == null || !"ACTIVE".equals(user.getStatus())) {
+                return null;
+            }
+            int currentVersion = user.getTokenVersion() == null ? 0 : user.getTokenVersion();
+            return ((Number) tv).intValue() == currentVersion ? user : null;
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
     }
 
     @Override
